@@ -27,33 +27,35 @@ app.get('/success', (req, res) => {
   res.render('success');   
 });
 
+
 app.post("/login", async (req, res) => {
-  let user = await userModel.findOne({ email: req.body.email });
-  if (!user) {
-    return res.redirect("/404");  }
-    bcrypt.compare(req.body.password, user.password, (err, result) => {
-        res.redirect("success");
-    })
+  try {
+    const user = await userModel.findOne({ email: req.body.email });
+    if (!user) return res.redirect("/404");
+
+    const match = await bcrypt.compare(req.body.password, user.password);
+    if (match) {
+      res.redirect("/success");
+    } else {
+      res.redirect("/404");
+    }
+  } catch (err) {
+    res.status(500).send("Login error");
+  }
 });
 
-app.post("/signup", (req, res) => {
-  let { username, password, email } = req.body;
 
-  bcrypt.genSalt(10, (err, salt) => {
-    bcrypt.hash(password, salt, async (err, hash) => {
-      let createdUser = await userModel.create({
-        username,
-        password: hash,
-        email,
-      });
-      res.send(createdUser);
-    });
-  });
-
-
-
-
-
+app.post("/signup", async (req, res) => {
+  try {
+    const { username, password, email } = req.body;
+    const hash = await bcrypt.hash(password, 10);
+    await userModel.create({ username, password: hash, email });
+    res.redirect("/login");
+  } catch (err) {
+    res.status(500).send("Error signing up");
+  }
 });
+
+
 
 app.listen(3000);
